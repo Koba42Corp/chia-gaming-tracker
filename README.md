@@ -1,19 +1,60 @@
-# Chia Gaming Tracker Server
+<div align="center">
 
-HTTP tracker server for Chia gaming room discovery. Built for secure, accessible game room discovery with support for public and private rooms.
+# 🎮 Chia Gaming Tracker Server
 
-## Overview
+**HTTP tracker server for decentralized Chia gaming room discovery**
 
-This tracker provides a simple, open HTTP API that any website can query to discover available game rooms. It enables cross-site interoperability - any site can display available game rooms and redirect users to join via the originating app's URL.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Koba42Corp/chia-gaming-tracker)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-Open%20Source-green.svg)](LICENSE)
+[![Express](https://img.shields.io/badge/express-4.18.2-blue.svg)](https://expressjs.com/)
+[![Tests](https://img.shields.io/badge/tests-jest-yellow.svg)](https://jestjs.io/)
 
-**Key Features:**
-- **Simple HTTP API** - Clean GET/POST endpoints for room discovery and management
-- **Public & Private Rooms** - Control room discoverability (public rooms appear in listings, private rooms require direct room ID)
-- **Cross-Site Joining** - `appBaseUrl` field enables any site to redirect users to join rooms
-- **Enterprise Security** - Rate limiting, IP blocking, comprehensive input validation
-- **Comprehensive Search & Filtering** - Text search, wager ranges, game types, status filtering
-- **Open & Interoperable** - No authentication required, works with any client
-- **Fast & Scalable** - In-memory storage with automatic cleanup
+</div>
+
+---
+
+## 📋 Overview
+
+A production-ready HTTP tracker server that provides a simple, open API for game room discovery in the Chia gaming ecosystem. This tracker enables cross-site interoperability, allowing any website to query and display available game rooms while supporting both public and private room listings.
+
+### ✨ Key Features
+
+- 🔌 **Simple HTTP API** - Clean GET/POST endpoints for room discovery and management
+- 🔒 **Public & Private Rooms** - Control room discoverability (public rooms appear in listings, private rooms require direct room ID)
+- 🌐 **Cross-Site Joining** - `appBaseUrl` field enables any site to redirect users to join rooms
+- 🛡️ **Enterprise Security** - Rate limiting, IP blocking, comprehensive input validation, replay attack prevention
+- 🔍 **Comprehensive Search & Filtering** - Text search, wager ranges, game types, status filtering, pagination
+- 🔓 **Open & Interoperable** - No authentication required, works with any client
+- ⚡ **Fast & Scalable** - In-memory storage with automatic cleanup, sub-100ms response times
+- 📊 **State Channel Support** - Track state channel status, balances, and locked amounts
+- 🐳 **Docker Ready** - Containerized deployment support
+- ☁️ **Cloud Deployable** - Deploy to Heroku, AWS ECS, EC2, or Elastic Beanstalk
+
+---
+
+## 📑 Table of Contents
+
+- [Overview](#-overview)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [API Endpoints](#api-endpoints)
+  - [GET /announce](#get-announce---list-available-rooms)
+  - [POST /announce](#post-announce---announce-a-room)
+  - [GET /scrape](#get-scrape---tracker-statistics)
+  - [GET /health](#get-health---health-check)
+- [Security Features](#security-features)
+- [Heroku Deployment](#heroku-deployment)
+- [Docker](#docker)
+- [AWS Deployment](#aws-deployment)
+- [Development](#development)
+- [Protocol Details](#protocol-details)
+- [Production Considerations](#production-considerations)
+- [License](#license)
+- [Credits](#credits)
+
+---
 
 ## Architecture
 
@@ -119,6 +160,13 @@ curl "https://relay.crate.ink/announce?includePrivate=true"
       "player1WalletAddress": "xch1...",
       "player1PeerId": "peer-123",
       "wagerAmount": 1000000,
+      "stateChannelCoinId": "0xabc123...",
+      "stateChannelStatus": "active",
+      "totalLockedAmount": 5000000,
+      "stateChannelSpacescanUrl": "https://www.spacescan.io/xch/coin/0xabc123...",
+      "player1Balance": 2500000,
+      "player2Balance": 2500000,
+      "activeGameId": "game-123",
       "createdAt": 1234567890123,
       "updatedAt": 1234567890123
     }
@@ -140,11 +188,16 @@ Announce a new game room or update an existing one. The same endpoint is used fo
 **Optional Fields:**
 - `public` - Boolean, default `true`. Set to `false` for private rooms (hidden from browse listings)
 - `gameType` - Game type: `rockpaperscissors`, `calpoker`, `battleship`, `tictactoe`, or `null`
-- `status` - Room status: `waiting`, `active`, `finished`, `cancelled` (default: `waiting`)
+- `status` - Room status: `waiting` (waiting for player 2), `active` (both players joined), `finished` (game completed successfully), `cancelled` (dropped connections, contested games) (default: `waiting`)
 - `player2Name`, `player2WalletAddress`, `player2PeerId` - Player 2 fields (when joined)
-- `wagerAmount` - Wager amount in mojos (default: 0)
-- `stateChannelCoinId` - State channel coin ID
-- `activeGameId` - Active game ID
+- `wagerAmount` - Current game bet amount in mojos (0 when no active game) (default: 0)
+- `stateChannelCoinId` - State channel coin ID (optional)
+- `stateChannelStatus` - State channel status: `pending`, `locked`, `active`, `settling`, `settled`, `cancelled` (optional)
+- `totalLockedAmount` - Total amount locked in state channel in mojos (optional, separate from wagerAmount)
+- `stateChannelSpacescanUrl` - URL to view state channel coin on Spacescan (optional)
+- `player1Balance` - Player 1's balance in state channel in mojos (optional)
+- `player2Balance` - Player 2's balance in state channel in mojos (optional)
+- `activeGameId` - Active game ID (optional)
 - `player1WalletPuzzleHash`, `player1PublicKey`, etc. - Additional player fields (recommended)
 - `timestamp`, `nonce` - For replay attack prevention
 
@@ -159,7 +212,13 @@ Announce a new game room or update an existing one. The same endpoint is used fo
   "player1Name": "Alice",
   "player1WalletAddress": "xch1abc123...",
   "player1PeerId": "peer-123",
-  "wagerAmount": 1000000
+  "wagerAmount": 0,
+  "stateChannelCoinId": "0xabc123...",
+  "stateChannelStatus": "locked",
+  "totalLockedAmount": 5000000,
+  "stateChannelSpacescanUrl": "https://www.spacescan.io/xch/coin/0xabc123...",
+  "player1Balance": 2500000,
+  "player2Balance": null
 }
 ```
 
@@ -173,7 +232,25 @@ Announce a new game room or update an existing one. The same endpoint is used fo
   "status": "waiting",
   "player1Name": "Alice",
   "player1WalletAddress": "xch1abc123...",
-  "player1PeerId": "peer-123"
+  "player1PeerId": "peer-123",
+  "wagerAmount": 0,
+  "stateChannelCoinId": "0xdef456...",
+  "stateChannelStatus": "pending"
+}
+```
+
+**Request Example (Update Room with Active Game):**
+```json
+{
+  "roomId": "unique-room-id",
+  "status": "active",
+  "player2Name": "Bob",
+  "player2WalletAddress": "xch1xyz789...",
+  "player2PeerId": "peer-456",
+  "wagerAmount": 1000000,
+  "activeGameId": "game-123",
+  "stateChannelStatus": "active",
+  "player2Balance": 2500000
 }
 ```
 
@@ -268,7 +345,10 @@ Health check endpoint for monitoring.
 - **Player names**: Max 50 characters, non-empty
 - **Wallet addresses**: Chia format validation (must start with `xch1` or `txch1`, max 100 chars)
 - **appBaseUrl**: Valid URL format (required)
-- **Wager amounts**: Non-negative integer, max 1 trillion mojos
+- **Wager amounts**: Non-negative integer, max 1 trillion mojos (wagerAmount = current game bet, 0 when no game; totalLockedAmount = total locked in state channel)
+- **State channel status**: Whitelist validation (`pending`, `locked`, `active`, `settling`, `settled`, `cancelled`)
+- **Player balances**: Non-negative integer, max 1 trillion mojos (player1Balance, player2Balance)
+- **Spacescan URL**: Valid URL format (optional, for stateChannelSpacescanUrl)
 - **Status**: Whitelist validation (`waiting`, `active`, `finished`, `cancelled`)
 
 ### Replay Attack Prevention
@@ -650,7 +730,11 @@ curl -X POST http://localhost:8766/announce \
     "status": "waiting",
     "player1Name": "TestPlayer",
     "player1WalletAddress": "xch1test1234567890123456789012345678901234567890",
-    "player1PeerId": "peer-test-123"
+    "player1PeerId": "peer-test-123",
+    "wagerAmount": 0,
+    "stateChannelCoinId": "0xtest123...",
+    "stateChannelStatus": "locked",
+    "totalLockedAmount": 10000000
   }'
 ```
 
@@ -672,21 +756,62 @@ All responses follow a standard format:
 ```typescript
 interface RoomRecord {
   roomId: string;              // Unique identifier
-  gameType: string;            // Game type
+  gameType: string | null;     // Game type (null when status is 'waiting')
   status: 'waiting' | 'active' | 'finished' | 'cancelled';
+  // 'waiting': Waiting for player 2 to join
+  // 'active': Both players have joined
+  // 'finished': Game completed successfully from start to end
+  // 'cancelled': Dropped connections, contested games, or other failures
   public: boolean;             // Visibility (false = private)
   appBaseUrl: string;          // Base URL for joining
+  
+  // Player 1 (required)
   player1Name: string;
   player1WalletAddress: string;
   player1PeerId: string;
+  
+  // Player 2 (optional, null until joined)
   player2Name: string | null;
   player2WalletAddress: string | null;
   player2PeerId: string | null;
-  wagerAmount: number;
+  
+  // State Channel Information
+  stateChannelCoinId: string | null;           // State channel coin ID
+  stateChannelStatus: string | null;           // 'pending' | 'locked' | 'active' | 'settling' | 'settled' | 'cancelled'
+  totalLockedAmount: number | null;            // Total amount locked in state channel (mojos)
+  stateChannelSpacescanUrl: string | null;     // URL to view coin on Spacescan
+  player1Balance: number | null;               // Player 1 balance in state channel (mojos)
+  player2Balance: number | null;               // Player 2 balance in state channel (mojos)
+  
+  // Game Information
+  wagerAmount: number;                         // Current game bet (0 when no active game) (mojos)
+  activeGameId: string | null;                 // Active game ID
+  
+  // Timestamps
   createdAt: number;
   updatedAt: number;
 }
 ```
+
+### Understanding State Channel Fields
+
+**State Channel vs. Game Bet:**
+- `totalLockedAmount`: Total funds locked in the state channel (persists across multiple games)
+- `wagerAmount`: Current game bet amount (0 when no active game, resets per game)
+
+**Example Scenario:**
+- State channel locked with 5 XCH total (`totalLockedAmount: 5000000000` mojos)
+- Players start a game with 1 XCH bet (`wagerAmount: 1000000000` mojos)
+- After game ends, `wagerAmount` becomes 0, but `totalLockedAmount` remains 5 XCH
+- Players can start another game with a different bet amount
+
+**State Channel Status Values:**
+- `pending`: State channel creation initiated but not yet locked
+- `locked`: Funds locked in state channel, ready for games
+- `active`: State channel active with ongoing games
+- `settling`: State channel being settled/closed
+- `settled`: State channel successfully settled
+- `cancelled`: State channel cancelled or failed
 
 ### Room Expiration
 

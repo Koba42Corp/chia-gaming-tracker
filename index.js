@@ -367,6 +367,56 @@ function validateAnnouncement(data) {
     }
   }
   
+  // Validate state channel status (optional)
+  if (data.stateChannelStatus !== undefined && data.stateChannelStatus !== null) {
+    const validStateChannelStatuses = ['pending', 'locked', 'active', 'settling', 'settled', 'cancelled'];
+    if (typeof data.stateChannelStatus !== 'string' || !validStateChannelStatuses.includes(data.stateChannelStatus)) {
+      errors.push(`Invalid stateChannelStatus (must be one of: ${validStateChannelStatuses.join(', ')}, or null)`);
+    }
+  }
+  
+  // Validate total locked amount in state channel (optional, in mojos)
+  if (data.totalLockedAmount !== undefined) {
+    const totalLocked = parseInt(data.totalLockedAmount);
+    if (isNaN(totalLocked) || totalLocked < 0) {
+      errors.push('Invalid totalLockedAmount (must be non-negative integer)');
+    } else if (totalLocked > 1000000000000) { // 1 trillion mojos (sanity check)
+      errors.push('totalLockedAmount too large');
+    }
+  }
+  
+  // Validate player balances in state channel (optional, in mojos)
+  if (data.player1Balance !== undefined) {
+    const balance = parseInt(data.player1Balance);
+    if (isNaN(balance) || balance < 0) {
+      errors.push('Invalid player1Balance (must be non-negative integer)');
+    } else if (balance > 1000000000000) { // 1 trillion mojos (sanity check)
+      errors.push('player1Balance too large');
+    }
+  }
+  
+  if (data.player2Balance !== undefined) {
+    const balance = parseInt(data.player2Balance);
+    if (isNaN(balance) || balance < 0) {
+      errors.push('Invalid player2Balance (must be non-negative integer)');
+    } else if (balance > 1000000000000) { // 1 trillion mojos (sanity check)
+      errors.push('player2Balance too large');
+    }
+  }
+  
+  // Validate state channel Spacescan URL (optional)
+  if (data.stateChannelSpacescanUrl !== undefined && data.stateChannelSpacescanUrl !== null) {
+    if (typeof data.stateChannelSpacescanUrl !== 'string') {
+      errors.push('Invalid stateChannelSpacescanUrl (must be string or null)');
+    } else {
+      try {
+        new URL(data.stateChannelSpacescanUrl);
+      } catch {
+        errors.push('Invalid stateChannelSpacescanUrl (must be a valid URL)');
+      }
+    }
+  }
+  
   // Validate active game ID (optional)
   if (data.activeGameId !== undefined && data.activeGameId !== null) {
     if (typeof data.activeGameId !== 'string' || data.activeGameId.length > 200) {
@@ -374,11 +424,11 @@ function validateAnnouncement(data) {
     }
   }
   
-  // Validate wager amount (if provided)
+  // Validate wager amount (current game bet, should be 0 when no game)
   if (data.wagerAmount !== undefined) {
     const wager = parseInt(data.wagerAmount);
     if (isNaN(wager) || wager < 0) {
-      errors.push('Invalid wagerAmount (must be non-negative integer)');
+      errors.push('Invalid wagerAmount (must be non-negative integer, 0 when no active game)');
     } else if (wager > 1000000000000) { // 1 trillion mojos (sanity check)
       errors.push('wagerAmount too large');
     }
@@ -678,9 +728,16 @@ app.post('/announce', rateLimit, (req, res) => {
       room.player2IdentityAddress = data.player2IdentityAddress !== undefined ? data.player2IdentityAddress : room.player2IdentityAddress;
       room.player2PeerId = data.player2PeerId !== undefined ? data.player2PeerId : room.player2PeerId;
       
-      // State channel and game fields
+      // State channel fields (can be updated)
       room.stateChannelCoinId = data.stateChannelCoinId !== undefined ? data.stateChannelCoinId : room.stateChannelCoinId;
-      room.wagerAmount = data.wagerAmount !== undefined ? data.wagerAmount : room.wagerAmount;
+      room.stateChannelStatus = data.stateChannelStatus !== undefined ? data.stateChannelStatus : room.stateChannelStatus;
+      room.totalLockedAmount = data.totalLockedAmount !== undefined ? data.totalLockedAmount : room.totalLockedAmount;
+      room.stateChannelSpacescanUrl = data.stateChannelSpacescanUrl !== undefined ? data.stateChannelSpacescanUrl : room.stateChannelSpacescanUrl;
+      room.player1Balance = data.player1Balance !== undefined ? data.player1Balance : room.player1Balance;
+      room.player2Balance = data.player2Balance !== undefined ? data.player2Balance : room.player2Balance;
+      
+      // Game fields (can be updated)
+      room.wagerAmount = data.wagerAmount !== undefined ? data.wagerAmount : room.wagerAmount; // Current game bet, 0 when no game
       room.activeGameId = data.activeGameId !== undefined ? data.activeGameId : room.activeGameId;
       
       room.updatedAt = Date.now();
@@ -714,9 +771,14 @@ app.post('/announce', rateLimit, (req, res) => {
         
         // State channel
         stateChannelCoinId: data.stateChannelCoinId || null,
+        stateChannelStatus: data.stateChannelStatus || null, // 'pending', 'locked', 'active', 'settling', 'settled', 'cancelled'
+        totalLockedAmount: data.totalLockedAmount !== undefined ? data.totalLockedAmount : null, // Total locked in state channel (mojos)
+        stateChannelSpacescanUrl: data.stateChannelSpacescanUrl || null, // URL to view coin on Spacescan
+        player1Balance: data.player1Balance !== undefined ? data.player1Balance : null, // Player 1 balance in state channel (mojos)
+        player2Balance: data.player2Balance !== undefined ? data.player2Balance : null, // Player 2 balance in state channel (mojos)
         
         // Game
-        wagerAmount: data.wagerAmount || 0,
+        wagerAmount: data.wagerAmount !== undefined ? data.wagerAmount : 0, // Current game bet (0 when no active game)
         activeGameId: data.activeGameId || null,
         
         // Timestamps
