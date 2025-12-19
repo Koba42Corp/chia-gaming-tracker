@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Room Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fff;
+            color: #333;
+            padding: 0;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .nav {
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .nav-logo {
+            height: 40px;
+            width: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 15px;
+            list-style: none;
+        }
+
+        .nav-menu li {
+            margin: 0;
+        }
+
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .nav-menu a:hover {
+            background: #e0e0e0;
+        }
+
+        .nav-menu a.active {
+            background: #333;
+            color: #fff;
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            padding: 10px;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Search/Filter box */
+        .search-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            color: #666;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        input, select {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+            padding: 6px 10px;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #666;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        .btn-secondary {
+            background: #999;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+        }
+
+        /* Rooms table */
+        .rooms-table-container {
+            background: #fff;
+            border: 1px solid #ddd;
+        }
+
+        .table-header {
+            background: #f9f9f9;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .rooms-count {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .rooms-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .rooms-table thead {
+            background: #f9f9f9;
+        }
+
+        .rooms-table th {
+            color: #333;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .rooms-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+
+        .rooms-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .room-id {
+            font-family: monospace;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .join-link {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .join-link:hover {
+            background: #0056b3;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-finished {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .game-type {
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .player-name {
+            color: #333;
+        }
+
+        .player-wallet {
+            font-family: monospace;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .wager-amount {
+            color: #333;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px 15px;
+            border-left: 3px solid #c33;
+            margin: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Health page */
+        .health-container {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+        }
+
+        .health-section {
+            margin-bottom: 20px;
+        }
+
+        .health-section h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .health-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .health-label {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .health-value {
+            color: #333;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .health-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .health-status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .health-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Footer */
+        .footer {
+            background: #f5f5f5;
+            border-top: 1px solid #ddd;
+            padding: 10px 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: auto;
+        }
+
+        .footer a {
+            color: #333;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive for iframe */
+        @media (max-width: 768px) {
+            .nav {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .nav-brand {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .nav-menu {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .nav-title {
+                font-size: 16px;
+            }
+
+            .nav-logo {
+                height: 32px;
+            }
+
+            .main-content {
+                padding: 5px;
+            }
+
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .rooms-table {
+                font-size: 11px;
+            }
+
+            .rooms-table th,
+            .rooms-table td {
+                padding: 6px 8px;
+            }
+
+            .stat-item {
+                flex-direction: column;
+                gap: 2px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-title {
+                display: none;
+            }
+
+            .nav-logo {
+                height: 36px;
+            }
+        }
+
+        /* Compact table for small screens */
+        @media (max-width: 600px) {
+            .rooms-table th:nth-child(5),
+            .rooms-table td:nth-child(5),
+            .rooms-table th:nth-child(7),
+            .rooms-table td:nth-child(7) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <a href="#" class="nav-brand" onclick="showPage('rooms'); return false;">
+            <img src="/logo.png" alt="Tracker Logo" class="nav-logo">
+            <span class="nav-title">Gaming Tracker</span>
+        </a>
+        <ul class="nav-menu">
+            <li><a href="#" data-page="rooms" class="active">Rooms</a></li>
+            <li><a href="#" data-page="health">Health</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Rooms Page -->
+        <div id="rooms-page" class="page active">
+            <div class="container">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">Total:</span>
+                        <span class="stat-value" id="totalRooms">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Waiting:</span>
+                        <span class="stat-value" id="waitingRooms">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Active:</span>
+                        <span class="stat-value" id="activeRooms">-</span>
+                    </div>
+                </div>
+
+                <div class="search-box">
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label>Game Type</label>
+                            <select id="gameType">
+                                <option value="all">All</option>
+                                <option value="rockpaperscissors">Rock Paper Scissors</option>
+                                <option value="calpoker">California Poker</option>
+                                <option value="battleship">Battleship</option>
+                                <option value="tictactoe">Tic Tac Toe</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Status</label>
+                            <select id="status">
+                                <option value="all">All</option>
+                                <option value="waiting">Waiting</option>
+                                <option value="active">Active</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Search</label>
+                            <input type="text" id="search" placeholder="Room ID or name...">
+                        </div>
+                        <div class="filter-group">
+                            <label>Sort</label>
+                            <select id="sort">
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="wager_high">High Wager</option>
+                                <option value="wager_low">Low Wager</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="loadRooms()">Search</button>
+                        <button class="btn-secondary" onclick="loadStats()">Refresh</button>
+                        <button class="btn-secondary" onclick="resetFilters()">Reset</button>
+                    </div>
+                </div>
+
+                <div class="rooms-table-container">
+                    <div class="table-header">
+                        <h2>Available Rooms</h2>
+                        <div class="rooms-count" id="roomsCount">Loading...</div>
+                    </div>
+                    <div id="errorMessage"></div>
+                    <div id="roomsList">
+                        <div class="loading">Loading rooms...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Page -->
+        <div id="health-page" class="page">
+            <div class="container">
+                <div class="health-container">
+                    <div class="health-section">
+                        <h3>Tracker Status</h3>
+                        <div id="healthStatus">
+                            <div class="loading">Loading health status...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        Made with ❤️ by <a href="https://koba42.com" target="_blank">koba42.com</a>
+    </footer>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // Navigation
+        document.querySelectorAll('.nav-menu a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = link.getAttribute('data-page');
+                showPage(page);
+            });
+        });
+
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Show selected page
+            const targetPage = document.getElementById(`${pageName}-page`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Update active nav link
+            document.querySelectorAll('.nav-menu a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-page') === pageName) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Load page-specific data
+            if (pageName === 'health') {
+                loadHealth();
+            } else if (pageName === 'rooms') {
+                loadStats();
+                loadRooms();
+            }
+        }
+
+        // Load rooms on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadRooms();
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                if (document.getElementById('rooms-page').classList.contains('active')) {
+                    loadRooms();
+                }
+            }, 30000);
+        });
+
+        // Filter event listeners
+        document.getElementById('gameType').addEventListener('change', loadRooms);
+        document.getElementById('status').addEventListener('change', loadRooms);
+        document.getElementById('sort').addEventListener('change', loadRooms);
+        document.getElementById('search').addEventListener('input', debounce(loadRooms, 500));
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/scrape`);
+                const data = await response.json();
+                
+                if (data.files) {
+                    document.getElementById('totalRooms').textContent = data.files._total?.complete || 0;
+                    document.getElementById('waitingRooms').textContent = data.files._by_status?.waiting || 0;
+                    document.getElementById('activeRooms').textContent = data.files._by_status?.active || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadHealth() {
+            const healthStatus = document.getElementById('healthStatus');
+            healthStatus.innerHTML = '<div class="loading">Loading health status...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+
+                const statusClass = data.status === 'ok' ? 'ok' : 'error';
+                const statusText = data.status === 'ok' ? 'OK' : 'ERROR';
+
+                healthStatus.innerHTML = `
+                    <div class="health-item">
+                        <span class="health-label">Status</span>
+                        <span class="health-value">
+                            <span class="health-status ${statusClass}">${statusText}</span>
+                        </span>
+                    </div>
+                    <div class="health-item">
+                        <span class="health-label">Tracker ID</span>
+                        <span class="health-value">${data.tracker || 'N/A'}</span>
+                    </div>
+                    <div class="health-item">
+                        <span class="health-label">Active Rooms</span>
+                        <span class="health-value">${data.rooms || 0}</span>
+                    </div>
+                    <div class="health-item">
+                        <span class="health-label">Last Check</span>
+                        <span class="health-value">${new Date(data.timestamp).toLocaleString()}</span>
+                    </div>
+                `;
+            } catch (error) {
+                healthStatus.innerHTML = `
+                    <div class="error">
+                        Error loading health status: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function loadRooms() {
+            const roomsList = document.getElementById('roomsList');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.innerHTML = '';
+            roomsList.innerHTML = '<div class="loading">Loading rooms...</div>';
+
+            try {
+                const params = new URLSearchParams();
+                const gameType = document.getElementById('gameType').value;
+                const status = document.getElementById('status').value;
+                const search = document.getElementById('search').value;
+                const sort = document.getElementById('sort').value;
+
+                if (gameType !== 'all') params.append('gameType', gameType);
+                if (status !== 'all') params.append('status', status);
+                if (search) params.append('search', search);
+                if (sort) params.append('sort', sort);
+                params.append('limit', '100');
+
+                const response = await fetch(`${API_BASE}/announce?${params}`);
+                const data = await response.json();
+
+                if (data['failure reason']) {
+                    throw new Error(data['failure reason']);
+                }
+
+                const rooms = data.rooms || [];
+                document.getElementById('roomsCount').textContent = `${rooms.length} room${rooms.length !== 1 ? 's' : ''}`;
+
+                if (rooms.length === 0) {
+                    roomsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎲</div>
+                            <p>No rooms found</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Create table
+                roomsList.innerHTML = `
+                    <table class="rooms-table">
+                        <thead>
+                            <tr>
+                                <th>Room ID</th>
+                                <th>Game</th>
+                                <th>Status</th>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Wager</th>
+                                <th>Created</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomsTableBody"></tbody>
+                    </table>
+                `;
+
+                const tbody = document.getElementById('roomsTableBody');
+                rooms.forEach(room => {
+                    const row = createRoomRow(room);
+                    tbody.appendChild(row);
+                });
+
+            } catch (error) {
+                errorMessage.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                roomsList.innerHTML = '<div class="empty-state"><p>Failed to load rooms</p></div>';
+            }
+        }
+
+        function createRoomRow(room) {
+            const row = document.createElement('tr');
+            
+            const statusClass = room.status === 'waiting' ? 'status-waiting' : 
+                               room.status === 'active' ? 'status-active' : 
+                               'status-finished';
+            const statusText = room.status === 'waiting' ? 'Waiting' : 
+                              room.status === 'active' ? 'Active' : 
+                              'Finished';
+            
+            const wagerXCH = room.wagerAmount ? (room.wagerAmount / 1000000000000).toFixed(4) : '0';
+            const createdDate = new Date(room.createdAt).toLocaleString();
+            
+            const player1Name = room.player1?.name || room.player1Name || 'Unknown';
+            const player1Wallet = room.player1?.walletAddress || room.player1WalletAddress || null;
+            const player2Name = room.player2?.name || room.player2Name || null;
+            const player2Wallet = room.player2?.walletAddress || room.player2WalletAddress || null;
+            
+            // Get the source site URL from environment or default to localhost
+            const SOURCE_SITE_URL = window.SOURCE_SITE_URL || 'http://localhost:4200';
+            
+            row.innerHTML = `
+                <td><span class="room-id">${room.roomId || 'unknown'}</span></td>
+                <td><span class="game-type">${formatGameType(room.gameType || 'unknown')}</span></td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>
+                    <div class="player-name">${player1Name}</div>
+                    ${player1Wallet ? `<div class="player-wallet">${player1Wallet.substring(0, 16)}...</div>` : ''}
+                </td>
+                <td>
+                    ${player2Name ? `
+                        <div class="player-name">${player2Name}</div>
+                        ${player2Wallet ? `<div class="player-wallet">${player2Wallet.substring(0, 16)}...</div>` : ''}
+                    ` : '<span style="color: #999;">-</span>'}
+                </td>
+                <td><span class="wager-amount">${wagerXCH} XCH</span></td>
+                <td style="color: #999; font-size: 11px;">${createdDate}</td>
+                <td>
+                    <a href="${SOURCE_SITE_URL}/#/room?roomId=${room.roomId}" 
+                       target="_blank" 
+                       class="join-link" 
+                       title="Join this room">
+                        Join
+                    </a>
+                </td>
+            `;
+            
+            return row;
+        }
+
+        function formatGameType(gameType) {
+            return gameType
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+        }
+
+        function resetFilters() {
+            document.getElementById('gameType').value = 'all';
+            document.getElementById('status').value = 'all';
+            document.getElementById('search').value = '';
+            document.getElementById('sort').value = 'newest';
+            loadRooms();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chia-gaming-tracker
+    restart: unless-stopped
+    ports:
+      - "8766:8766"
+    environment:
+      # Server
+      - PORT=8766
+      # - TRACKER_ID=your-custom-tracker-id  # Optional: auto-generated if not set
+      
+      # Room Expiration
+      - PEER_TIMEOUT=600  # 10 minutes (rooms expire after this)
+      
+      # Rate Limiting
+      - RATE_LIMIT_MAX_REQUESTS=120  # GET requests per minute
+      - RATE_LIMIT_MAX_ANNOUNCES=20  # POST requests per minute
+      # - DISABLE_RATE_LIMIT=false  # Set to 'true' to disable (dev only)
+      
+      # IP Blocking
+      - MAX_VIOLATIONS=10  # Violations before IP block
+      - BLOCK_DURATION=300000  # Block duration in milliseconds (5 minutes)
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8766/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - tracker-network
+
+networks:
+  tracker-network:
+    driver: bridge
+
