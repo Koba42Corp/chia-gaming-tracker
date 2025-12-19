@@ -480,8 +480,8 @@
         @media (max-width: 600px) {
             .rooms-table th:nth-child(5),
             .rooms-table td:nth-child(5),
-            .rooms-table th:nth-child(7),
-            .rooms-table td:nth-child(7) {
+            .rooms-table th:nth-child(8),
+            .rooms-table td:nth-child(8) {
                 display: none;
             }
         }
@@ -769,7 +769,8 @@
                                 <th>Status</th>
                                 <th>Player 1</th>
                                 <th>Player 2</th>
-                                <th>Wager</th>
+                                <th>Current Bet</th>
+                                <th>State Channel</th>
                                 <th>Created</th>
                                 <th>Action</th>
                             </tr>
@@ -800,7 +801,17 @@
                               room.status === 'active' ? 'Active' : 
                               'Finished';
             
-            const wagerXCH = room.wagerAmount ? (room.wagerAmount / 1000000000000).toFixed(4) : '0';
+            // Format amounts (mojos to XCH)
+            const formatXCH = (mojos) => {
+                if (!mojos) return '0';
+                return (mojos / 1000000000000).toFixed(4);
+            };
+            
+            const wagerXCH = formatXCH(room.wagerAmount);
+            const totalLockedXCH = formatXCH(room.totalLockedAmount);
+            const player1BalanceXCH = formatXCH(room.player1Balance);
+            const player2BalanceXCH = formatXCH(room.player2Balance);
+            
             const createdDate = new Date(room.createdAt).toLocaleString();
             
             const player1Name = room.player1?.name || room.player1Name || 'Unknown';
@@ -808,8 +819,46 @@
             const player2Name = room.player2?.name || room.player2Name || null;
             const player2Wallet = room.player2?.walletAddress || room.player2WalletAddress || null;
             
+            // Format state channel status
+            const formatStateChannelStatus = (status) => {
+                if (!status) return { text: '-', class: '' };
+                const statusMap = {
+                    'pending': { text: 'Pending', class: 'status-waiting' },
+                    'locked': { text: 'Locked', class: 'status-active' },
+                    'active': { text: 'Active', class: 'status-active' },
+                    'settling': { text: 'Settling', class: 'status-waiting' },
+                    'settled': { text: 'Settled', class: 'status-finished' },
+                    'cancelled': { text: 'Cancelled', class: 'status-finished' }
+                };
+                return statusMap[status] || { text: status, class: '' };
+            };
+            
+            const scStatus = formatStateChannelStatus(room.stateChannelStatus);
+            
             // Get the source site URL from environment or default to localhost
-            const SOURCE_SITE_URL = window.SOURCE_SITE_URL || 'http://localhost:4200';
+            const SOURCE_SITE_URL = window.SOURCE_SITE_URL || room.appBaseUrl || 'http://localhost:4200';
+            
+            // Build state channel info HTML
+            let stateChannelInfo = '<div style="font-size: 11px;">';
+            if (room.stateChannelStatus) {
+                stateChannelInfo += `<div><span class="status-badge ${scStatus.class}">${scStatus.text}</span></div>`;
+            }
+            if (room.totalLockedAmount) {
+                stateChannelInfo += `<div style="margin-top: 4px;"><strong>Total:</strong> ${totalLockedXCH} XCH</div>`;
+            }
+            if (room.player1Balance !== null && room.player1Balance !== undefined) {
+                stateChannelInfo += `<div style="margin-top: 2px; color: #666;"><strong>P1:</strong> ${player1BalanceXCH} XCH</div>`;
+            }
+            if (room.player2Balance !== null && room.player2Balance !== undefined) {
+                stateChannelInfo += `<div style="margin-top: 2px; color: #666;"><strong>P2:</strong> ${player2BalanceXCH} XCH</div>`;
+            }
+            if (room.stateChannelSpacescanUrl) {
+                stateChannelInfo += `<div style="margin-top: 4px;"><a href="${room.stateChannelSpacescanUrl}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 10px;">View on Spacescan</a></div>`;
+            }
+            if (!room.stateChannelStatus && !room.totalLockedAmount) {
+                stateChannelInfo = '<span style="color: #999;">-</span>';
+            }
+            stateChannelInfo += '</div>';
             
             row.innerHTML = `
                 <td><span class="room-id">${room.roomId || 'unknown'}</span></td>
@@ -825,7 +874,8 @@
                         ${player2Wallet ? `<div class="player-wallet">${player2Wallet.substring(0, 16)}...</div>` : ''}
                     ` : '<span style="color: #999;">-</span>'}
                 </td>
-                <td><span class="wager-amount">${wagerXCH} XCH</span></td>
+                <td><span class="wager-amount" title="Current game bet">${wagerXCH} XCH</span></td>
+                <td style="min-width: 120px;">${stateChannelInfo}</td>
                 <td style="color: #999; font-size: 11px;">${createdDate}</td>
                 <td>
                     <a href="${SOURCE_SITE_URL}/#/room?roomId=${room.roomId}" 
